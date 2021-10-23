@@ -3,8 +3,8 @@ import { BrowserRouter as Router, Route, Switch } from "react-router-dom";
 import './App.css';
 
 import NotFound from "./components/NotFound";
-import RRSearch from "./components/GameSearch";
-import RRNavbar from "./components/AppNavbar";
+import RRSearch from "./components/RRSearch";
+import RRNavbar from "./components/RRNavbar";
 
 function App() {
   return (
