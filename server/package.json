@@ -1,0 +1,22 @@
+{
+  "name": "reddit-recon",
+  "version": "1.0.0",
+  "description": "Analyses sentiment of topics on Reddit!",
+  "main": "app.js",
+  "scripts": {
+    "start": "node ./bin/www",
+    "dev": "node --trace-warnings ./bin/www"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^0.21.4",
+    "cors": "^2.8.5",
+    "express": "^4.17.1",
+    "helmet": "^4.6.0",
+    "http-errors": "^1.8.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.12"
+  }
+}
