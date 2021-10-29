@@ -8,21 +8,38 @@ cache._redisClient.on('error', (err) => {
 });
 
 // Attempt to get the value associated with key from
-// the caching system. callback is a function with
-// string error and JSON object value.
+// the caching system.
 cache.get = function(key,callback) {
-    return this._redisClient.get(key,(err,result) => {
-        if(result) {
-            callback(null,JSON.parse(result));
-        }else{
-            callback("Key not not stored in cache.",null);
-        }
+    return new Promise((resolve,reject) =>{
+        this._redisClient.get(key,(err,val) => {
+            if (err) {
+                reject(err);
+                return;
+            }
+            if(val == null) {
+                resolve(null);
+                return;
+            }
+
+            try{
+                resolve(
+                    JSON.parse(val)
+                )
+            } catch (ex) {
+                resolve(val);
+            }
+        });
     });
+    
 }
 
 // Put a value into the cache
-cache.put = function(key, value) {
-    return this._redisClient.setex(key,3600,JSON.stringify(value));
+cache.put = function(key, value,expiration = 3600) {
+    if(typeof value === 'object'){
+        value = JSON.stringify(value);
+    }
+    
+    this._redisClient.setex(key,expiration,JSON.stringify(value));
 }
 
 module.exports = cache;
