@@ -11,7 +11,7 @@ router.get("/", (req, res) => {
 router.post("/", express.json(), (req, res) => {
 //router.post("/:mode", express.text(), (req, res) => {
     // Error if no body was posted
-    if (!req.body?.data) {
+    if (!req.body.data) {
         res.json({
             "status": false,
             "msg": "body is empty"
@@ -23,7 +23,7 @@ router.post("/", express.json(), (req, res) => {
     let result = new sentiment().analyze(req.body.data);
 
     // Check if we need to be inefficient
-    if (req.body?.mode == "inefficient") {
+    if (req.body.mode == "inefficient") {
         console.log("here")
         let result = true;
         let num = 148306271;

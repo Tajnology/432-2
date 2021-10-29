@@ -15,6 +15,7 @@
     "express": "^4.17.1",
     "helmet": "^4.6.0",
     "http-errors": "^1.8.0",
+    "node": "^17.0.1",
     "sentiment": "^5.0.2"
   },
   "devDependencies": {
