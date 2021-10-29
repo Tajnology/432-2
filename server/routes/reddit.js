@@ -4,14 +4,16 @@ const axios = require("axios");
 
 const router = express.Router();
 const cache = require("../utils/cache");
+//const { json } = require("stream/consumers");
 
-const defaultSort = "relevant";
+const defaultSort = "relevance";
 const postType = "link";
 const defaultLimit = 10;
-const chunkSize = 25;
+const chunkSize = 200;
 
 const searchTermPrefix = "search:";
 const postPrefix = "post:";
+const afterPrefix = "after:";
 
 const searchQueryCacheExpiry = 60*60; // seconds
 const postCacheExpiry = 24*60*60; // seconds
@@ -31,9 +33,10 @@ function handleRedditResponse(redditRes, postsCallback) {
 		const postArray = rsp.data.children;
 		const n = rsp.data.dist;
 
-		if(n == 0) resolve(null);
+		if(n == 0) postsCallback(null);
 
 		postsFound = [];
+		lastSeen = null;
 
 		for(let i = 0; i < n; i++){
 			const content = postArray[i].data.selftext; // Constains the body text from a Reddit post
@@ -46,21 +49,27 @@ function handleRedditResponse(redditRes, postsCallback) {
 					id: postArray[i].data.name
 				};
 
-				postsFound.push();
+				postsFound.push(postObject);
 
 				// Put the post in the cache
 				cache.put(postPrefix + postObject.id,postObject,postCacheExpiry);
 			}
+
+			lastSeen = postArray[i].data.name;
 		}
 
-		postsCallback(postsFound);
+		postsCallback({posts:postsFound,lastId:lastSeen});
 	})
 }
 
 function postsById(postIDs) {
 	return new Promise((posts) => {
 		const options = createPostsByIdOptions(postIDs);
-		const redditReq = https.request(options,(redditRes) => handleRedditResponse(redditRes,postsCallback));
+		const redditReq = https.request(options,(redditRes) => handleRedditResponse(redditRes,posts));
+		redditReq.on('error', (e) => {
+			console.error(e);
+		});
+		redditReq.end();
 	});
 }
 
@@ -82,7 +91,12 @@ function createPostsByIdOptions(postIDs) {
 function redditSearch(query, after, sort, limit) {
 	return new Promise((posts) => {
 		const options = createRedditOptions(query,limit,sort,after);
+		console.log('options: ' + JSON.stringify(options));
 		const redditReq = https.request(options,(redditRes) => handleRedditResponse(redditRes,posts));
+		redditReq.on('error', (e) => {
+			console.error(e);
+		});
+		redditReq.end();
 	});
 }
 
@@ -110,22 +124,35 @@ function createRedditOptions(query, limit = 25, sort = "relevance", after = null
 }
   
 
-function appendPosts(postArray, query, sort, limit, chunkSize) {
-	return new Promise((resolve) => {
-		lastPost = postArray[postArray.length - 1];
 
-		redditSearch(query,lastPost.id,sort,chunkSize)
-		.then(posts => {
+function appendPosts(postArray, query, sort, limit, chunkSize, lastId) {
+	return new Promise((resolve) => {
+		if(lastId == null && postArray.length >= 1) {
+			lastId = postArray[postArray.length-1].id;
+		}
+
+		redditSearch(query,lastId,sort,chunkSize)
+		.then((value) => {
+			if(value == null){
+				resolve(null);
+				return null;
+			}
+
+			lastId = value.lastId;
+			posts = value.posts;
+
 			for (let i = 0; i < posts.length; i++) {
 				const post = posts[i];
 				
 				if(postArray.length < limit){
 					postArray.push(post);
 				}else{
-					resolve(true);
-					return true;
+					resolve(lastId);
+					return;
 				}
 			}
+
+			resolve(lastId);
 		})
 		.catch(
 			error => console.log(error)
@@ -134,7 +161,7 @@ function appendPosts(postArray, query, sort, limit, chunkSize) {
 }
 
 function checkPostCache(postID){
-	return cache.get(postPrefix + query).catch((err) => {console.log("Problem fetching a post from the cache: ", err)});
+	return cache.get(postPrefix + postID).catch((err) => {console.log("Problem fetching a post from the cache: ", err)});
 }
 
 function checkSearchCache(query,sort){
@@ -160,7 +187,10 @@ router.get("/", (req, res) => {
 	.then((postIDs) => {
 		// Promise to return the posts corresponding to the IDs that have been cached
 		return new Promise((partialPosts) => {
-			if(postIDs == null) return []; // No IDs cached
+			if(postIDs == null){
+				partialPosts(true); // No IDs cached
+				return;
+			}
 
 			let idsNotFound = [];
 
@@ -184,8 +214,9 @@ router.get("/", (req, res) => {
 						if(idsNotFound.length > 0){
 							// Get the posts matching the cached IDs from the Reddit API
 							postsById(idsNotFound)
-							.then((newPosts) => {
+							.then((value) => {
 								// Push the additional posts and resolve the promise
+								newPosts  = value.posts;
 								posts.push(newPosts);
 								partialPosts(true);
 							});
@@ -200,6 +231,7 @@ router.get("/", (req, res) => {
 	}).then((partialPosts) => {
 		// If there are already enough posts, satisfy the promise
 		if(posts.length >= limit) return true;
+		let lastId = null;
 
 		// Promise to return a success boolean when the posts array has been filled to limit
 		return new Promise((success) => {
@@ -209,9 +241,10 @@ router.get("/", (req, res) => {
 				if(posts.length < limit) {
 
 					// Get the posts from reddit
-					appendPosts(posts,query,sort,limit,chunkSize)
-					.then((success) => {
+					appendPosts(posts,query,sort,limit,chunkSize, lastId)
+					.then((lastIdRet) => {
 						// Get more posts
+						lastId = lastIdRet;
 						getSomePosts();
 					})
 				}else{
@@ -231,7 +264,7 @@ router.get("/", (req, res) => {
 		}
 
 		// Update the cache with the most recent search results
-		cache.put(searchTermPrefix + sort + query,searchQueryCacheExpiry,postIDs);
+		cache.put(searchTermPrefix + sort + query,postIDs,searchQueryCacheExpiry);
 
 		// Send the HTTP response
 		res.status(200).json({status:success,data:posts});

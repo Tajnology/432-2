@@ -24,7 +24,7 @@ cache.get = function(key,callback) {
             try{
                 resolve(
                     JSON.parse(val)
-                )
+                );
             } catch (ex) {
                 resolve(val);
             }
@@ -39,7 +39,7 @@ cache.put = function(key, value,expiration = 3600) {
         value = JSON.stringify(value);
     }
     
-    this._redisClient.setex(key,expiration,JSON.stringify(value));
+    this._redisClient.setex(key,expiration,value);
 }
 
 module.exports = cache;
