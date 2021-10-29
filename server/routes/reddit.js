@@ -1,56 +1,209 @@
 const express = require("express");
+const https = require('https');
 const axios = require("axios");
 
 const router = express.Router();
 const cache = require("../utils");
 
+const defaultSort = "relevant";
+const postType = "link";
+const defaultLimit = 25;
+const chunkSize = 25;
+
+const searchTermPrefix = "search:";
+const postPrefix = "post:";
+
+const searchQueryCacheExpiry = 60*60; // seconds
+const postCacheExpiry = 24*60*60; // seconds
+
+const getPostsTimeout = 50; // ms
+
+function handleRedditResponse(redditRes, postsCallback) {
+	let body = [];
+
+	redditRes.on('data',function(chunk) {
+		body.push(chunk);
+	});
+	redditRes.on('end', function() {
+		const bodyString = body.join('');
+		const rsp = JSON.parse(bodyString);
+
+		const postArray = rsp.data.children;
+		const n = rsp.data.dist;
+
+		if(n == 0) resolve(null);
+
+		postsFound = [];
+
+		for(let i = 0; i < n; i++){
+			const content = postArray[i].data.selftext; // Constains the body text from a Reddit post
+			if(content.length != 0) {
+				postsFound.push({
+					title: postArray[i].data.title,
+					content: content,
+					redditScore: postArray[i].data.score,
+					permalink: "https://www.reddit.com" + postArray[i].data.permalink,
+					id: postArray[i].data.name
+				});
+			}
+		}
+
+		postsCallback(postsFound);
+	})
+}
+
+function postsById(postIDs) {
+	return new Promise((posts) => {
+		const options = createPostsByIdOptions(postIDs);
+		const redditReq = https.request(options,(redditRes) => handleRedditResponse(redditRes,postsCallback));
+	});
+}
+
+function createPostsByIdOptions(postIDs) {
+	const options = {
+	  hostname: "www.reddit.com",
+	  port: 443,
+	  path: "/api/info.json?",
+	  method: "GET"
+	}
+  
+	let str = 'method=' + options.method
+	  + '&id=' + postIDs.join(',');
+  
+	options.path += str;
+	return options;
+}
+
+function redditSearch(query, after, sort, limit) {
+	return new Promise((posts) => {
+		const options = createRedditOptions(query,limit,sort,after);
+		const redditReq = https.request(options,(redditRes) => handleRedditResponse(redditRes,posts));
+	});
+}
+
+function createRedditOptions(query, limit = 25, sort = "relevance", after = null) {
+	const options = {
+	  hostname: "www.reddit.com",
+	  port: 443,
+	  path: "/search.json?",
+	  method: "GET"
+	}
+  
+	let str = 'method=' + options.method
+	  + '&q=' + query
+	  + '&type=' + postType
+	  + '&sort=' + sort
+	  + '&limit=' + limit;
+  
+	if (after != null) {
+	  // If this isn't the first 'page' of results, after will be a valid link ID
+	  str = str + '&after=' + after;
+	}
+  
+	options.path += str;
+	return options;
+}
+  
+
+function appendPosts(postArray, query, sort, limit, chunkSize) {
+	return new Promise((resolve) => {
+		lastPost = postArray[postArray.length - 1];
+
+		redditSearch(query,lastPost.id,sort,chunkSize)
+		.then(posts => {
+			for (let i = 0; i < posts.length; i++) {
+				const post = posts[i];
+
+				// Put the post into the redis cache
+				cache.put(postPrefix + post.id,postCacheExpiry,post);
+				
+				if(postArray.length < limit){
+					postArray.push(post);
+				}else{
+					resolve(true);
+					return true;
+				}
+			}
+		})
+		.catch(
+			error => console.log(error)
+		);
+	});
+}
+
+function checkPostCache(postID){
+	return cache.get(postPrefix + query).catch((err) => {console.log("Problem fetching a post from the cache: ", err)});
+}
+
+function checkSearchCache(query,sort){
+	// Check the cache for the search
+	return cache.get(searchTermPrefix + sort + query).catch((err) => {console.log("Problem fetching search results from cache: ",err)});
+} 
+
 router.get("/", (req, res) => {
     const query = req.query.q;
-	const sort = req.query.sort;
-	const limit = req.query.limit;
-    
-    if(query == undefined){
-        return res.status(400).json({status: false});
-    }
-    
-    if(query.length > 5) {
-        return res.status(200).json({status: true,
-        data: [
-            `What has Donald Trump done to get the massive following he has?  \
-\
-I was in my early 20’s when he announced he would be running for president. All I ever saw was him just saying the stupidest things or making real poor decisions. But yet, almost half the country swore him a god. I just never understood it. And still don’t. People are STILL waving there Trump flags and “spitting the truth”. \
-Now, I’m not saying I absolutely hate the guy like a lot of people. I’m quite an open minded person and always get both sides of a situation before making a solid opinion. But for me it was always hard it seemed to get the “good” side of Trump that apparently all these people see. Like from news articles or word of mouth. I know the news media played a part and only shit on him constantly, but I’d like to know what they didn’t cover. So that brings us to;\
-\
-What are some of the things Trump has done that was good? And could make him “the greatest president of all time” as some people claim.\
-\
-Why do these people basically base there personality and life on this guy?\
-\
-Edit - Okay guys, enough with the senseless insults and sarcastic reply’s. I’m looking for serious info and a decent discussion.\
-\
-Edit 2 - I like how I’m being downvoted for asking a legit question trying to further educate myself and not remain ignorant. Classic.`, 
+	var limit = defaultLimit;
+	var sort = defaultSort;
+	if(req.query.sort != null) sort = req.query.sort;
+	if(req.query.limit != null) limit = req.query.limit;
 
+	if(query == undefined) {
+		return res.status(400).json({status:false,message:"No query [q] provided"});
+	}
 
+	let posts = [];
 
+	return checkSearchCache(query,sort)
+	.then((postIDs) => {
+		return new Promise((partialPosts) => {
+			if(postIDs != null){
+				for(let i = 0; i < postIDs.length; i++) {
+					
+				}
+			}
+		});
+	}).then((partialPosts) => {
+		if(partialPosts.length >= limit) return true;
 
-        `I was hoping to leave this feedback through an official channel but can't for the life of me find the 2042 Beta feedback form so I'll leave it here and just pray that I'm heard...
-Drone specialist ability feels lame, it can’t tag targets for extended times so it's not helpful for me or my team once I leave the drone view. I just doesn’t seem that useful overall compared to the turret or grapple hook or other specialist abilities.
+		return new Promise((success) => {
+			function getSomePosts() {
+				if(partialPosts.length < limit) {
+					appendPosts(posts,query,sort,limit,chunkSize)
+					.then((success) => {
+						getSomePosts();
+					})
+				}else{
+					success(true);
+				}
+			}
+			
+			getSomePosts();
+		});
+		
+	}).then((success) => {
+		
+	})
+	.catch((err) => console.log(err));
+	
+/*
+	function foundAllPosts() {
+		return res.status(200).json({status:true,data:posts});
+	}
 
-Visibility outside of vehicles vs inside is night and day. Especially during night, rain, etc. I found this to be especially problematic flying the helicopter in the rain. There was a 0% chance i could spot an enemy from inside the cockpit, then I clicked to get the 3rd person view and it was clear as day! I think you need to tone down the water droplets and visual effects when in the helicopter and it provides a pretty unfair disadvantage to those who want to fly first-person! As someone who LOVES flying first-person in the vehicles in battlefield games this seemed almost game-breaking to me. LIke I had to almost constantly switch views to spot targets then switch back into the cockpit to aim/fire at them. It was quite frustrating.
+	function appendPost(post) {
+		if(posts.length >= limit) return;
 
-Gun Mags and reloading doesn't seem to make sense to me. Extended mag stuck at 20 rounds and can’t reload it. Half the time I just switch mag sizes to reload or get more ammo when I appear to have run out. There’s something off with this or the UI doesn’t explain it well. I'm not sure, but I just assumed it was broken during beta.
+		posts.push(post);
 
-These are things that I see you've addressed in your recent "Changes since beta" post so I'm very thankful!
+		if(posts.length >= limit) {
+			foundAllPosts();
+		}
+	}
 
-    Can’t tag targets well with R1. It’s hard to tag a person vs saying “Go here”.
-
-    It’s not clear who’s squad I’m in or how to move through squads. The UIUX Is bad around that.`,
-        
-        `IN DEFENSE OF CYBERPUNK 2077-OPINION OF A FAN
-I have been having more fun with Cyberpunk 2077 than I've had with a new game in years. The studio that gave us the Witcher 3, with 40 hr dlc for $10 (HoS) and 70hr dlc for $20 (BaW), and was so good to its fans, has been literally abandoned by the entire gaming community worldwide. I am amazed that "gamers" can hate so passionately what hundreds of people spent years of their lives putting their energy into. The game is well-written, well-acted, gorgeous, filled with deep systems, a huge variety of items to loot/craft/buy, legendary/iconic armor and weapons, the sickest looking vehicles I've personally every seen in a game, and the city itself, as someone who has played AAA games seriously for 15 years, is an undeniable work of wonder. I barely fast-travel just to see as much of it as I can in the travel interim between missions. I am playing on Google Stadia, no lag or latency, some bugs but in the most ambitious open world map I've ever seen it comes with the territory. Why play games if you hate them all? A similar outpouring of hate and venom came streaming out of thousands of useless consumer-critics' accounts on gaming review aggregate sites all over the net when The Last Of Us Part ll came out, which polarized because it was literary in its ambition as a story; incorporating dark, explorative themes of vengeance and trauma into the narrative-fabric and using the unique "interactive-movie" potential of the video game medium to tell the story in a visceral way that makes the player almost complicit in the harrowing scenes taking place on screen. Never mind the journalists criticizing CP2077 for "not having trans characters play a large role" or "not letting V be trans"; that stems from a totally different, cultural issue bubbling to the surface today. What concerns me most, and should concern you as well because you are lucid enough to see the game for what it is despite the narrative spun by culture around it, is the viscousness of the gaming community in response to the game. Unfortunately, I think a lot of gamers who say negative things about it, haven't beaten the game, or couldn't beat it as it was unplayable for a lot of people on last gen consoles. The only thing I fault CD Projekt for is having released it at all on last gen hardware, that was a clear mistake. The game itself is phenomenal in my opinion. I predict that in several years it will be remembered as a masterpiece; especially after DLC, more patches, expansions etc.`
-        ]});
-    } else {
-        return res.status(200).json({status: false});
-    }
+	function needMorePosts() {
+		return posts.length < limit;
+	}
+ */
 });
 
 module.exports = router;
