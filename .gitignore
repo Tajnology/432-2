@@ -1,1 +1,4 @@
+**/node_modules
+**/package-lock.json
+client/build
 server/dump.rdb
