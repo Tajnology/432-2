@@ -3,7 +3,7 @@ const https = require('https');
 const axios = require("axios");
 
 const router = express.Router();
-const cache = require("../utils");
+const cache = require("../utils/cache");
 
 const defaultSort = "relevant";
 const postType = "link";
