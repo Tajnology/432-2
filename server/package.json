@@ -16,6 +16,8 @@
     "helmet": "^4.6.0",
     "http-errors": "^1.8.0",
     "node": "^17.0.1",
+    "redis": "^3.1.2",
+    "redis-server": "^1.2.2",
     "sentiment": "^5.0.2"
   },
   "devDependencies": {
