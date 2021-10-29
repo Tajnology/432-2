@@ -14,8 +14,7 @@
     "cors": "^2.8.5",
     "express": "^4.17.1",
     "helmet": "^4.6.0",
-    "http-errors": "^1.8.0",
-    "redis-server": "^1.2.2"
+    "http-errors": "^1.8.0"
   },
   "devDependencies": {
     "nodemon": "^2.0.12"

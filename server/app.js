@@ -3,16 +3,9 @@ const createError = require("http-errors");
 const express = require("express");
 const helmet = require("helmet");
 const cors = require("cors");
-const redis = require("redis");
 const port = 8080;
 
 var app = express();
-
-// Create redis client
-var redisClient = redis.createClient();
-redisClient.on('error',(err) => {
-	console.log("Error " + err);
-});
 
 // Use helmet
 app.use(helmet({
