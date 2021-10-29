@@ -2,9 +2,12 @@ const express = require("express");
 const axios = require("axios");
 
 const router = express.Router();
+const cache = require("../utils");
 
 router.get("/", (req, res) => {
     const query = req.query.q;
+	const sort = req.query.sort;
+	const limit = req.query.limit;
     
     if(query == undefined){
         return res.status(400).json({status: false});
