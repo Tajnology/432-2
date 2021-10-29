@@ -5,7 +5,7 @@
   "main": "app.js",
   "scripts": {
     "start": "node ./bin/www",
-    "dev": "node --trace-warnings ./bin/www"
+    "dev": "npx nodemon node --trace-warnings ./bin/www"
   },
   "author": "",
   "license": "ISC",
@@ -14,7 +14,8 @@
     "cors": "^2.8.5",
     "express": "^4.17.1",
     "helmet": "^4.6.0",
-    "http-errors": "^1.8.0"
+    "http-errors": "^1.8.0",
+    "sentiment": "^5.0.2"
   },
   "devDependencies": {
     "nodemon": "^2.0.12"
