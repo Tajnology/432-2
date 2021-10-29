@@ -169,6 +169,10 @@ function checkSearchCache(query,sort){
 	return cache.get(searchTermPrefix + sort + query).catch((err) => {console.log("Problem fetching search results from cache: ",err)});
 } 
 
+// Query parameters
+// q - the string query that will be searched on reddit
+// limit - the number of posts that will be found (default = 10)
+// sort - the sorting order of the posts, one of (relevance, hot, top, new, comments) (default = relevance)
 router.get("/", (req, res) => {
     const query = req.query.q;
 	var limit = defaultLimit;
