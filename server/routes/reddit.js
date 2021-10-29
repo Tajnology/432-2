@@ -7,7 +7,7 @@ const cache = require("../utils");
 
 const defaultSort = "relevant";
 const postType = "link";
-const defaultLimit = 25;
+const defaultLimit = 10;
 const chunkSize = 25;
 
 const searchTermPrefix = "search:";
@@ -38,13 +38,18 @@ function handleRedditResponse(redditRes, postsCallback) {
 		for(let i = 0; i < n; i++){
 			const content = postArray[i].data.selftext; // Constains the body text from a Reddit post
 			if(content.length != 0) {
-				postsFound.push({
+				postObject = {
 					title: postArray[i].data.title,
 					content: content,
 					redditScore: postArray[i].data.score,
 					permalink: "https://www.reddit.com" + postArray[i].data.permalink,
 					id: postArray[i].data.name
-				});
+				};
+
+				postsFound.push();
+
+				// Put the post in the cache
+				cache.put(postPrefix + postObject.id,postObject,postCacheExpiry);
 			}
 		}
 
@@ -113,9 +118,6 @@ function appendPosts(postArray, query, sort, limit, chunkSize) {
 		.then(posts => {
 			for (let i = 0; i < posts.length; i++) {
 				const post = posts[i];
-
-				// Put the post into the redis cache
-				cache.put(postPrefix + post.id,postCacheExpiry,post);
 				
 				if(postArray.length < limit){
 					postArray.push(post);
@@ -153,26 +155,67 @@ router.get("/", (req, res) => {
 
 	let posts = [];
 
+	// Check the cache for the query and sort combination
 	return checkSearchCache(query,sort)
 	.then((postIDs) => {
+		// Promise to return the posts corresponding to the IDs that have been cached
 		return new Promise((partialPosts) => {
-			if(postIDs != null){
-				for(let i = 0; i < postIDs.length; i++) {
-					
-				}
+			if(postIDs == null) return []; // No IDs cached
+
+			let idsNotFound = [];
+
+			let idsChecked = 0;
+			for(let i = 0; i < postIDs.length; i++){
+				// Look in the cache for a post matching the ith ID
+				checkPostCache(postIDs[i])
+				.then((post) => {
+					if(post != null){
+						// If the post was in the cache, add it to the post array
+						posts.push(post);
+						idsChecked++;
+					}else{
+						// Otherwise add it to the cache miss array
+						idsNotFound.push(postIDs[i]);
+					}
+
+					// If this is the last post ID to be processed
+					if(idsChecked == postIDs.length){
+						// Check if there is anything in the cache miss array
+						if(idsNotFound.length > 0){
+							// Get the posts matching the cached IDs from the Reddit API
+							postsById(idsNotFound)
+							.then((newPosts) => {
+								// Push the additional posts and resolve the promise
+								posts.push(newPosts);
+								partialPosts(true);
+							});
+						}else{
+							// If not, resolve the promise with the post array
+							partialPosts(true);
+						}
+					}
+				})
 			}
 		});
 	}).then((partialPosts) => {
-		if(partialPosts.length >= limit) return true;
+		// If there are already enough posts, satisfy the promise
+		if(posts.length >= limit) return true;
 
+		// Promise to return a success boolean when the posts array has been filled to limit
 		return new Promise((success) => {
+			// Function to allow self-calls if more posts are needed
 			function getSomePosts() {
-				if(partialPosts.length < limit) {
+				// If more posts are needed
+				if(posts.length < limit) {
+
+					// Get the posts from reddit
 					appendPosts(posts,query,sort,limit,chunkSize)
 					.then((success) => {
+						// Get more posts
 						getSomePosts();
 					})
 				}else{
+					// When enough posts are found resolve the promise
 					success(true);
 				}
 			}
@@ -181,29 +224,20 @@ router.get("/", (req, res) => {
 		});
 		
 	}).then((success) => {
-		
+		let postIDs = [];
+
+		for(let i = 0; i < posts.length; i++){
+			postIDs.push(posts[i].id);
+		}
+
+		// Update the cache with the most recent search results
+		cache.put(searchTermPrefix + sort + query,searchQueryCacheExpiry,postIDs);
+
+		// Send the HTTP response
+		res.status(200).json({status:success,data:posts});
 	})
 	.catch((err) => console.log(err));
-	
-/*
-	function foundAllPosts() {
-		return res.status(200).json({status:true,data:posts});
-	}
 
-	function appendPost(post) {
-		if(posts.length >= limit) return;
-
-		posts.push(post);
-
-		if(posts.length >= limit) {
-			foundAllPosts();
-		}
-	}
-
-	function needMorePosts() {
-		return posts.length < limit;
-	}
- */
 });
 
 module.exports = router;
