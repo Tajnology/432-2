@@ -12,7 +12,7 @@ router.post("/", express.json(), (req, res) => {
 //router.post("/:mode", express.text(), (req, res) => {
     // Error if no body was posted
     if (!req.body?.data) {
-        res.json({
+        res.status(400).json({
             "status": false,
             "msg": "body is empty"
         });
