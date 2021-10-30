@@ -1,15 +1,23 @@
 require('dotenv').config();
 const AWS = require('aws-sdk');
+AWS.config.update({region:"ap-southeast-2"});
 
 store = new Object();
 store._apiVersion = '2006-03-01';
 
 store.create = function(bucketName) {
-    return bucketPromise = new AWS.S3( {apiVersion: this._apiVersion})
+    console.log("Trying to create a bucket");
+    return new AWS.S3( {apiVersion: this._apiVersion})
     .createBucket({Bucket:bucketName}).promise();
 }
 
-store.put = function(bucketName, key, value, expirationDays = 1) {
+store.delete = function(bucketName) {
+
+    return new AWS.S3( {apiVersion: this._apiVersion})
+    .deleteBucket({Bucket: bucketName}).promise();
+}
+
+store.put = function(bucketName, key, value) {
     if(typeof value === 'object'){
         value = JSON.stringify(value);
     }
@@ -33,9 +41,9 @@ store.get = function(bucketName, key) {
             }
 
             try{
-                resolve(JSON.parse(result));
+                resolve(JSON.parse(result.Body));
             } catch (ex) {
-                resolve(result);
+                resolve(result.Body);
             }
         });
     });

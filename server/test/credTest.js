@@ -1,5 +1,7 @@
 require('dotenv').config();
 var AWS = require("aws-sdk");
+AWS.config.update({region:"ap-southeast-2"});
+
 AWS.config.getCredentials(function (err) {
     if (err) console.log(err.stack);
     // credentials not loaded
