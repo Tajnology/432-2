@@ -1,5 +1,5 @@
 **/node_modules
 **/package-lock.json
 client/build
-server/dump.rdb
-server/test/dump.rdb
+*.rdb
+*.swp
