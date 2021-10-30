@@ -14,7 +14,7 @@ store.put = function(bucketName, key, value, expirationDays = 1) {
         value = JSON.stringify(value);
     }
 
-    const objectParams = {Bucket: bucketName, Key: key, Body: value, Expi};
+    const objectParams = {Bucket: bucketName, Key: key, Body: value};
     return new AWS.S3({apiVersion: this._apiVersion}).putObject(objectParams).promise();
 }
 
