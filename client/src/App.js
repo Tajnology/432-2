@@ -3,8 +3,8 @@ import { BrowserRouter as Router, Route, Switch } from "react-router-dom";
 import './App.css';
 
 import NotFound from "./components/NotFound";
-import RRSearch from "./components/RRSearch";
 import RRNavbar from "./components/RRNavbar";
+import RRDisplay from "./components/RRDisplay";
 
 function App() {
   return (
@@ -14,7 +14,7 @@ function App() {
       <div className="container">
         <Switch>
 
-          <Route exact path="/" component={RRSearch} />
+          <Route exact path="/" component={RRDisplay} />
 
           <Route path="*" component={NotFound} />
 
