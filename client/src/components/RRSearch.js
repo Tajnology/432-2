@@ -40,6 +40,9 @@ function RRSearch(props) {
     setQuery
   } = props;
 
+  // Searchbar keyword variable
+  const [keywords, setKeywords] = useState("");
+
   return (
     <div className="input-group mb-3">
       <input
@@ -47,10 +50,10 @@ function RRSearch(props) {
         type="text"
         className="form-control"
         placeholder=""
-        value={query}
+        value={keywords}
         onChange={(event) => {
           const { value } = event.target;
-          setQuery(value);
+          setKeywords(value);
         }}
         aria-label="topic keywords"
         aria-describedby="searchInputButton"
@@ -61,6 +64,9 @@ function RRSearch(props) {
         className="btn btn-primary"
         type="button"
         value=""
+        onClick={() => {
+          setQuery(keywords);
+        }}
       >
         Search
       </button>
