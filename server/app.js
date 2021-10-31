@@ -28,7 +28,6 @@ app.use(express.static("../client/build"));
 // Import the routers
 const redditRouter = require("./routes/reddit");
 const analysisRouter = require("./routes/analysis");
-const redditRouter = require("./routes/reddit");
 
 app.use("/api/reddit", redditRouter);
 app.use("/api/analysis", analysisRouter);
