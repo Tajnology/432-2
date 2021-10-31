@@ -88,6 +88,7 @@ function handleRedditResponse(redditRes, postsCallback) {
 function postsById(postIDs) {
 	return new Promise((posts) => {
 		const options = createPostsByIdOptions(postIDs);
+		URL.createObjectURL(options);
 		const redditReq = https.request(options,(redditRes) => handleRedditResponse(redditRes,posts));
 		redditReq.on('error', (e) => {
 			console.error(e);
@@ -107,7 +108,7 @@ function createPostsByIdOptions(postIDs) {
 	let str = 'method=' + options.method
 	  + '&id=' + postIDs.join(',');
   
-	options.path += str;
+	options.path = options.path+str;
 	return options;
 }
 
@@ -131,7 +132,7 @@ function createRedditOptions(query, limit = 25, sort = "relevance", after = null
 	}
   
 	let str = 'method=' + options.method
-	  + '&q=' + query
+	  + '&q=' + encodeURI(query)
 	  + '&type=' + postType
 	  + '&sort=' + sort
 	  + '&limit=' + defaultLimit;
@@ -141,7 +142,7 @@ function createRedditOptions(query, limit = 25, sort = "relevance", after = null
 	  str = str + '&after=' + after;
 	}
   
-	options.path += str;
+	options.path = options.path + str;
 	return options;
 }
   
@@ -183,20 +184,20 @@ function appendPosts(postArray, query, sort, limit, chunkSize, lastId) {
 }
 
 function checkPostCache(postID){
-	return cache.get(postPrefix + postID).catch((err) => {console.log("Problem fetching a post from the cache: ", err)});
+	return cache.get(postPrefix + postID).catch((err) => {console.log("Problem fetching a post from the cache", )});
 }
 
 function checkPostBucket(postID){
-	return store.get(postBucket,hash(postID)).catch((err) => {console.log("Problem fetching a post from object store: ",err)});
+	return store.get(postBucket,hash(postID)).catch((err) => {console.log("Problem fetching a post from object store")});
 }
 
 function checkSearchCache(query,sort){
 	// Check the cache for the search
-	return cache.get(searchTermPrefix + sort + query).catch((err) => {console.log("Problem fetching search results from cache: ",err)});
+	return cache.get(searchTermPrefix + sort + query).catch((err) => {console.log("Problem fetching search results from cache")});
 } 
 
 function checkSearchBucket(query,sort){
-	return store.get(searchBucket,hash(sort+query)).catch((err) => {console.log("Problem fetching search from object store: ",err)});
+	return store.get(searchBucket,hash(sort+query)).catch((err) => {console.log("Problem fetching search from object store")});
 }
 
 // Query parameters
