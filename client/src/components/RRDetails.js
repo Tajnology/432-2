@@ -151,7 +151,7 @@ function RRDetails(props) {
 
     axios({
       "method": "get",
-      "url": "/api/reddit",
+      "url": "//api/reddit",
       "params": {
         "q": query
       }
@@ -183,7 +183,7 @@ function RRDetails(props) {
     let mode = scalingMode ? "inefficient" : "efficient";
     axios({
       "method": "post",
-      "url": "/api/analysis",
+      "url": "//api/analysis",
       "data": {
         "mode": mode,
         "data": redditResults
