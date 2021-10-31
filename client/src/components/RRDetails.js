@@ -39,13 +39,16 @@ function ResultDisplay(props) {
       }
     }
 
+    n.reverse();
+    p.reverse();
+
     setPositive(p);
     setNegative(n);
 
   }, [analysisResults]);
 
   return (
-    <section>
+    <section className="my-5">
 
       <div>
         <h1 className="fw">Search Results</h1>
@@ -56,22 +59,12 @@ function ResultDisplay(props) {
 
       <div>
         <h2>Positive</h2>
-        {
-          positive.map((post) => {
-            return (
-              <div>
-                title: {post[1].title}<br/>
-                content: {post[1].content}<br/>
-                score: {post[0]}<br/>
-                <br/>
-              </div>
-            )
-          })
-        }
+        <CardGrid data={positive} />
       </div>
 
       <div>
         <h2>Negative</h2>
+        <CardGrid data={negative} />
       </div>
 
     </section>
@@ -82,9 +75,25 @@ function ResultDisplay(props) {
  * Card holder. One column only.
  */
 function CardGrid(props) {
+  // Grab the card data
+  const {
+    data
+  } = props;
+
   return (
     <div>
-
+      {data.map((post) => {
+        return (
+          <div className="row row-cols-1">
+            <Card
+              title={post[1].title}
+              content={post[1].content}
+              score={post[0]}
+            />
+          </div>
+        )
+      })
+      }
     </div>
   );
 }
@@ -93,9 +102,24 @@ function CardGrid(props) {
  * Cards that contain a reddit post and it's associated score
  */
 function Card(props) {
-  return (
-    <div>
+  // Extract title, content and score
+  const {
+    title,
+    content,
+    score
+  } = props;
 
+  return (
+    <div className="col mb-4">
+      <div className="card">
+        <div className="card-body">
+          <h5 className="card-title">{title}</h5>
+          <p className="card-text">{content}</p>
+        </div>
+        <ul className="list-group list-group-flush">
+          <li className="list-group-item">Score: {score}</li>
+        </ul>
+      </div>
     </div>
   );
 }
@@ -131,20 +155,20 @@ function RRDetails(props) {
         "q": query
       }
     })
-    .then((response) => {
-      return response.data;
-    })
-    .then((response) => {
-      // Check if it was a success
-      if (response.status && response.data.length > 0) {
-        // Set it to redditResults
-        setRedditResults(response.data);
-      }
-    })
-    .catch((error) => {
-      // Process error
-      console.error(error);
-    });
+      .then((response) => {
+        return response.data;
+      })
+      .then((response) => {
+        // Check if it was a success
+        if (response.status && response.data.length > 0) {
+          // Set it to redditResults
+          setRedditResults(response.data);
+        }
+      })
+      .catch((error) => {
+        // Process error
+        console.error(error);
+      });
   }, [query]);
 
   // Analyse reddit results
@@ -163,19 +187,19 @@ function RRDetails(props) {
         "data": redditResults
       }
     })
-    .then((response) => {
-      return response.data;
-    })
-    .then((response) => {
-      // Check if it was a success
-      if (response.status && response.data.length > 0) {
-        setAnalysisResults(response.data);
-      }
-    })
-    .catch((error) => {
-      // Process error
-      console.error(error);
-    });
+      .then((response) => {
+        return response.data;
+      })
+      .then((response) => {
+        // Check if it was a success
+        if (response.status && response.data.length > 0) {
+          setAnalysisResults(response.data);
+        }
+      })
+      .catch((error) => {
+        // Process error
+        console.error(error);
+      });
   }, [redditResults]);
 
   return (
