@@ -7,7 +7,7 @@ import RRDetails from "./RRDetails";
 /**
  * Homepage
  */
-function RRDisplay() {
+function RRHomepage() {
   // Update the page title
   useEffect(() => {
     document.title = "Homepage - Reddit Recon";
@@ -32,4 +32,4 @@ function RRDisplay() {
   );
 }
 
-export default RRDisplay;
+export default RRHomepage;

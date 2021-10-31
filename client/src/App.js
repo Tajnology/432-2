@@ -4,7 +4,7 @@ import './App.css';
 
 import NotFound from "./components/NotFound";
 import RRNavbar from "./components/RRNavbar";
-import RRDisplay from "./components/RRDisplay";
+import RRHomepage from "./components/RRHomepage";
 
 function App() {
   return (
@@ -14,7 +14,7 @@ function App() {
       <div className="container">
         <Switch>
 
-          <Route exact path="/" component={RRDisplay} />
+          <Route exact path="/" component={RRHomepage} />
 
           <Route path="*" component={NotFound} />
 
