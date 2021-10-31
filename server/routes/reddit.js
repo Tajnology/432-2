@@ -340,10 +340,9 @@ router.get("/", (req, res) => {
 		store.put(searchBucket,hash(sort + query),postIDs);
 
 		// Send the HTTP response
-		res.status(200).json({status:success,data:posts});
+		return res.status(200).json({status:success,data:posts});
 	})
 	.catch((err) => console.log(err));
-
 });
 
 module.exports = router;
