@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { NavLink } from "react-router-dom";
 
 import RRSearch from "./RRSearch";
 import RRDetails from "./RRDetails";
@@ -7,7 +6,11 @@ import RRDetails from "./RRDetails";
 /**
  * Homepage
  */
-function RRHomepage() {
+function RRHomepage(props) {
+  const {
+    scalingMode
+  } = props;
+
   // Update the page title
   useEffect(() => {
     document.title = "Homepage - Reddit Recon";
@@ -26,6 +29,7 @@ function RRHomepage() {
       <RRDetails
         query={query}
         setQuery={setQuery}
+        scalingMode={scalingMode}
       />
 
     </div>

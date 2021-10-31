@@ -117,7 +117,7 @@ function Card(props) {
           <p className="card-text">{content}</p>
         </div>
         <ul className="list-group list-group-flush">
-          <li className="list-group-item">Score: {score}</li>
+          <li className="list-group-item" key="0">Score: {score}</li>
         </ul>
       </div>
     </div>
@@ -131,7 +131,8 @@ function RRDetails(props) {
   // Query state
   const {
     query,
-    setQuery
+    setQuery,
+    scalingMode
   } = props;
 
   // Reddit results state
@@ -179,11 +180,12 @@ function RRDetails(props) {
       return;
     }
 
+    let mode = scalingMode ? "inefficient" : "efficient";
     axios({
       "method": "post",
       "url": "//localhost:8080/api/analysis",
       "data": {
-        "mode": "efficient",
+        "mode": mode,
         "data": redditResults
       }
     })
