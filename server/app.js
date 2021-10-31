@@ -28,9 +28,11 @@ app.use(express.static("../client/build"));
 // Import the routers
 const redditRouter = require("./routes/reddit");
 const analysisRouter = require("./routes/analysis");
+const redditRouter = require("./routes/reddit");
 
 app.use("/api/reddit", redditRouter);
 app.use("/api/analysis", analysisRouter);
+app.use("/api/reddit", redditRouter);
 
 // Forward any routes which don't match the static assets or api to the React
 // application. This allows for the use of things such as React Router.
